@@ -51,4 +51,4 @@ streamlit run streamlit_snake.py
 
 **Desktop:** Arrow keys or W/A/S/D. Main menu: ↑/↓ for difficulty, ENTER to start. After game over: ENTER = retry, M = menu, ESC = quit.
 
-**Streamlit:** Snake moves continuously. Click the direction buttons (Left, Up, Down, Right) to steer.
+**Streamlit:** Same controls as desktop — ↑↓←→ or W A S D. Click the game area to focus, then use keyboard.

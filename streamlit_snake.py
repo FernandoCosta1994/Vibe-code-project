@@ -1,141 +1,227 @@
 """
 Snake Game — Forest Edition (Streamlit)
-Real-time: snake moves continuously, use buttons to change direction.
+Embedded HTML5 version: plays like the pygame version with keyboard (↑↓←→ or WASD).
 """
 import streamlit as st
-import random
-from PIL import Image, ImageDraw
-from streamlit_autorefresh import st_autorefresh
+import streamlit.components.v1 as components
 
-# Game config
-COLS, ROWS = 24, 18
-CELL = 20
-W, H = COLS * CELL, ROWS * CELL
-TICK_MS = 150  # Snake moves every 150ms
-
-# Forest palette (RGB)
-FOREST_TOP = (6, 26, 20)
-FOREST_MID = (10, 45, 28)
-FOREST_BOTTOM = (36, 26, 18)
-TREE_DARK = (9, 25, 16)
-TREE_LEAVES = (20, 70, 35)
-SNAKE_HEAD = (170, 240, 120)
-SNAKE_BODY = (90, 190, 90)
-SNAKE_BELLY = (40, 110, 60)
-SNAKE_OUTLINE = (15, 40, 20)
-APPLE_RED = (215, 60, 60)
-APPLE_HIGHLIGHT = (250, 210, 210)
-APPLE_LEAF = (40, 130, 60)
-APPLE_STEM = (90, 55, 30)
-GRID_COLOR = (20, 45, 30)
+# Difficulty: speed multiplier (higher = faster)
+DIFFICULTIES = {"Easy": 0.8, "Normal": 1.0, "Hard": 1.3}
 
 
-def init_state():
-    if "snake" not in st.session_state:
-        st.session_state.snake = [(COLS // 2, ROWS // 2)]
-        st.session_state.direction = (1, 0)
-        st.session_state.grow_pending = 0
-        st.session_state.food = random_food(st.session_state.snake)
-        st.session_state.score = 0
-        st.session_state.high_score = 0
-        st.session_state.game_over = False
-        st.session_state.screen = "menu"
+def get_game_html(speed_mult: float) -> str:
+    """Generate full HTML5 Snake game with forest theme and keyboard controls."""
+    tick_ms = int(150 / speed_mult)  # Base 150ms, slower for Easy, faster for Hard
+    return f"""
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+* {{ margin: 0; padding: 0; }}
+body {{ background: #0a1410; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: system-ui; }}
+#game {{ border-radius: 8px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }}
+#c {{ display: block; background: #061a14; cursor: default; }}
+#c:focus {{ outline: none; }}
+.hud {{ background: #08100c; color: #fff; padding: 6px 12px; display: flex; justify-content: space-between; font-size: 14px; border-bottom: 1px solid #193723; }}
+.hud span {{ color: #c3e68c; }}
+</style>
+</head>
+<body>
+<div id="game">
+<div class="hud"><span>Score: <b id="score">0</b></span><span>Best: <b id="best">0</b></span></div>
+<canvas id="c" width="800" height="568" tabindex="1"></canvas>
+</div>
+<script>
+const C=document.getElementById('c'), ctx=C.getContext('2d');
+const W=800,H=568,CELL=20,COLS=W/CELL,ROWS=H/CELL;
+const TICK_MS={tick_ms};
 
+const COLORS={{forestTop:'#061a14',forestMid:'#0a2d1c',forestBottom:'#241a12',treeDark:'#091910',treeLeaves:'#144623',
+snakeHead:'#aaf078',snakeBody:'#5abe5a',snakeBelly:'#286e3c',snakeOutline:'#0f2814',appleRed:'#d73c3c',appleHighlight:'#fad2d2',
+appleLeaf:'#28823c',appleStem:'#5a371e',grid:'#142d1e',white:'#fff',black:'#111'}};
 
-def random_food(snake_positions):
-    positions = set(snake_positions)
-    free = [(x, y) for x in range(COLS) for y in range(ROWS) if (x, y) not in positions]
-    return random.choice(free) if free else (0, 0)
+let snake=[], dir=[1,0], food, score=0, best=0, grow=0, tick=0, state='play', lastMove=0;
 
+function rndFood(){{
+  const set=new Set(snake.map(s=>s[0]+','+s[1]));
+  const free=[];
+  for(let x=0;x<COLS;x++)for(let y=0;y<ROWS;y++)if(!set.has(x+','+y))free.push([x,y]);
+  return free[Math.floor(Math.random()*free.length)]||[0,0];
+}}
 
-def move_snake():
-    s = st.session_state
-    h = s.snake[0]
-    dx, dy = s.direction
-    nx = (h[0] + dx) % COLS
-    ny = (h[1] + dy) % ROWS
+function reset(){{
+  snake=[[Math.floor(COLS/2),Math.floor(ROWS/2)]];
+  dir=[1,0]; grow=0; food=rndFood(); score=0; state='play';
+}}
 
-    if (nx, ny) in s.snake[1:]:
-        s.game_over = True
-        if s.score > s.high_score:
-            s.high_score = s.score
-        return
+function roundRect(x,y,w,h,r){{
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}}
 
-    s.snake.insert(0, (nx, ny))
-    if s.grow_pending > 0:
-        s.grow_pending -= 1
-    else:
-        s.snake.pop()
+function drawBg(){{
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,COLORS.forestTop);
+  g.addColorStop(0.45,COLORS.forestMid);
+  g.addColorStop(1,COLORS.forestBottom);
+  ctx.fillStyle=g;
+  ctx.fillRect(0,0,W,H);
+  const sway=Math.sin(tick*0.01)*4;
+  for(let x=-60;x<W+60;x+=120){{
+    const i=Math.floor((x+60)/120), bx=x+sway*(1+(i%3));
+    ctx.fillStyle=COLORS.treeDark;
+    ctx.fillRect(bx,H-180,22,140);
+    ctx.fillStyle=COLORS.treeLeaves;
+    ctx.beginPath();
+    ctx.moveTo(bx+11,H-200);
+    ctx.lineTo(bx-25,H-40);
+    ctx.lineTo(bx+47,H-40);
+    ctx.closePath();
+    ctx.fill();
+  }}
+  ctx.fillStyle='rgba(78,160,120,0.25)';
+  ctx.fillRect(0,H-120,W,100);
+}}
 
-    if (nx, ny) == s.food:
-        s.score += 1
-        s.grow_pending += 1
-        s.food = random_food(s.snake)
+function drawGrid(){{
+  ctx.strokeStyle=COLORS.grid;
+  ctx.lineWidth=1;
+  for(let x=0;x<=W;x+=CELL){{ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }}
+  for(let y=0;y<=H;y+=CELL){{ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }}
+}}
 
+function drawSnake(){{
+  for(let i=0;i<snake.length;i++){{
+    const [gx,gy]=snake[i], x=gx*CELL, y=gy*CELL, head=i===0;
+    ctx.fillStyle=COLORS.snakeOutline;
+    roundRect(x,y,CELL,CELL,6);
+    ctx.fill();
+    ctx.fillStyle=COLORS.snakeBody;
+    roundRect(x+2,y+2,CELL-4,CELL-4,5);
+    ctx.fill();
+    ctx.fillStyle=COLORS.snakeBelly;
+    roundRect(x+2,y+CELL/2,CELL-4,CELL/2-2,5);
+    ctx.fill();
+    if(head){{
+      ctx.fillStyle=COLORS.snakeHead;
+      roundRect(x+1,y+1,CELL-2,CELL-2,7);
+      ctx.fill();
+      const [dx,dy]=dir;
+      let e1,e2;
+      if(dx===1){{ e1=[x+CELL-8,y+8]; e2=[x+CELL-8,y+CELL-8]; }}
+      else if(dx===-1){{ e1=[x+8,y+8]; e2=[x+8,y+CELL-8]; }}
+      else if(dy===-1){{ e1=[x+8,y+8]; e2=[x+CELL-8,y+8]; }}
+      else{{ e1=[x+8,y+CELL-8]; e2=[x+CELL-8,y+CELL-8]; }}
+      ctx.fillStyle=COLORS.white;
+      ctx.beginPath();
+      ctx.arc(e1[0],e1[1],3,0,Math.PI*2);
+      ctx.arc(e2[0],e2[1],3,0,Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle=COLORS.black;
+      ctx.beginPath();
+      ctx.arc(e1[0],e1[1],2,0,Math.PI*2);
+      ctx.arc(e2[0],e2[1],2,0,Math.PI*2);
+      ctx.fill();
+    }}
+  }}
+}}
 
-def change_direction(new_dx, new_dy):
-    s = st.session_state
-    opp = (-s.direction[0], -s.direction[1])
-    if (new_dx, new_dy) != opp:
-        s.direction = (new_dx, new_dy)
+function drawFood(){{
+  const [fx,fy]=food, cx=fx*CELL+CELL/2, cy=fy*CELL+CELL/2, r=CELL/2-3;
+  ctx.fillStyle=COLORS.appleRed;
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle=COLORS.appleHighlight;
+  ctx.beginPath();
+  ctx.arc(cx-r/3,cy-r/3,Math.max(1,r/4),0,Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle=COLORS.appleStem;
+  ctx.fillRect(cx-1,cy-r-4,3,6);
+  ctx.fillStyle=COLORS.appleLeaf;
+  ctx.beginPath();
+  ctx.moveTo(cx+2,cy-r);
+  ctx.lineTo(cx+10,cy-r-6);
+  ctx.lineTo(cx+6,cy-r+2);
+  ctx.closePath();
+  ctx.fill();
+}}
 
+function move(){{
+  const h=snake[0], nx=(h[0]+dir[0]+COLS)%COLS, ny=(h[1]+dir[1]+ROWS)%ROWS;
+  for(let i=1;i<snake.length;i++)if(snake[i][0]===nx&&snake[i][1]===ny){{ state='over'; if(score>best)best=score; return; }}
+  snake.unshift([nx,ny]);
+  if(grow>0)grow--; else snake.pop();
+  if(nx===food[0]&&ny===food[1]){{ score++; grow++; food=rndFood(); }}
+}}
 
-def render_board():
-    img = Image.new("RGB", (W, H), FOREST_TOP)
-    draw = ImageDraw.Draw(img)
+function drawOver(){{
+  ctx.fillStyle='rgba(0,0,0,0.7)';
+  ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=COLORS.white;
+  ctx.font='bold 36px system-ui';
+  ctx.textAlign='center';
+  ctx.fillText('Game Over',W/2,H/2-50);
+  ctx.font='18px system-ui';
+  ctx.fillText('Score: '+score,W/2,H/2);
+  ctx.fillStyle='#c3e68c';
+  ctx.fillText('Best: '+best,W/2,H/2+35);
+  ctx.fillStyle='#fff';
+  ctx.fillText('ENTER: play again   •   Click "Back to Menu" below',W/2,H/2+80);
+}}
 
-    # Gradient background
-    for y in range(H):
-        t = y / H
-        if t < 0.45:
-            blend = t / 0.45
-            r = int(FOREST_TOP[0] * (1 - blend) + FOREST_MID[0] * blend)
-            g = int(FOREST_TOP[1] * (1 - blend) + FOREST_MID[1] * blend)
-            b = int(FOREST_TOP[2] * (1 - blend) + FOREST_MID[2] * blend)
-        else:
-            blend = (t - 0.45) / 0.55
-            r = int(FOREST_MID[0] * (1 - blend) + FOREST_BOTTOM[0] * blend)
-            g = int(FOREST_MID[1] * (1 - blend) + FOREST_BOTTOM[1] * blend)
-            b = int(FOREST_MID[2] * (1 - blend) + FOREST_BOTTOM[2] * blend)
-        draw.line([(0, y), (W, y)], fill=(r, g, b))
+C.focus();
+reset();
 
-    # Grid
-    for x in range(0, W + 1, CELL):
-        draw.line([(x, 0), (x, H)], fill=GRID_COLOR)
-    for y in range(0, H + 1, CELL):
-        draw.line([(0, y), (W, y)], fill=GRID_COLOR)
+document.addEventListener('keydown',e=>{{
+  if(state==='over'){{
+    if(e.key==='Enter'){{ reset(); e.preventDefault(); }}
+    else if(e.key==='m'||e.key==='M'){{ /* User can click Back to Menu below */ e.preventDefault(); }}
+    return;
+  }}
+  const opp=[-dir[0],-dir[1]];
+  if(e.key==='ArrowUp'||e.key==='w'||e.key==='W'){{ if(opp[1]!==-1)dir=[0,-1]; e.preventDefault(); }}
+  else if(e.key==='ArrowDown'||e.key==='s'||e.key==='S'){{ if(opp[1]!==1)dir=[0,1]; e.preventDefault(); }}
+  else if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A'){{ if(opp[0]!==-1)dir=[-1,0]; e.preventDefault(); }}
+  else if(e.key==='ArrowRight'||e.key==='d'||e.key==='D'){{ if(opp[0]!==1)dir=[1,0]; e.preventDefault(); }}
+}});
 
-    # Snake
-    for i, (gx, gy) in enumerate(st.session_state.snake):
-        x, y = gx * CELL, gy * CELL
-        is_head = i == 0
-        draw.rectangle([x, y, x + CELL - 1, y + CELL - 1], outline=SNAKE_OUTLINE, fill=SNAKE_BODY)
-        draw.rectangle([x + 2, y + CELL // 2, x + CELL - 3, y + CELL - 1], fill=SNAKE_BELLY)
-        if is_head:
-            draw.rectangle([x + 1, y + 1, x + CELL - 2, y + CELL - 2], fill=SNAKE_HEAD)
-            dx, dy = st.session_state.direction
-            if dx == 1:
-                draw.ellipse([x + CELL - 10, y + 6, x + CELL - 4, y + 12], fill=(255, 255, 255))
-                draw.ellipse([x + CELL - 10, y + CELL - 12, x + CELL - 4, y + CELL - 6], fill=(255, 255, 255))
-            elif dx == -1:
-                draw.ellipse([x + 4, y + 6, x + 10, y + 12], fill=(255, 255, 255))
-                draw.ellipse([x + 4, y + CELL - 12, x + 10, y + CELL - 6], fill=(255, 255, 255))
-            elif dy == -1:
-                draw.ellipse([x + 6, y + 4, x + 12, y + 10], fill=(255, 255, 255))
-                draw.ellipse([x + CELL - 12, y + 4, x + CELL - 6, y + 10], fill=(255, 255, 255))
-            else:
-                draw.ellipse([x + 6, y + CELL - 10, x + 12, y + CELL - 4], fill=(255, 255, 255))
-                draw.ellipse([x + CELL - 12, y + CELL - 10, x + CELL - 6, y + CELL - 4], fill=(255, 255, 255))
-
-    # Food (apple)
-    fx, fy = st.session_state.food
-    cx, cy = fx * CELL + CELL // 2, fy * CELL + CELL // 2
-    draw.ellipse([cx - 7, cy - 7, cx + 7, cy + 7], fill=APPLE_RED)
-    draw.ellipse([cx - 4, cy - 4, cx, cy], fill=APPLE_HIGHLIGHT)
-    draw.rectangle([cx - 1, cy - 10, cx + 2, cy - 4], fill=APPLE_STEM)
-    draw.polygon([(cx + 2, cy - 7), (cx + 10, cy - 12), (cx + 6, cy - 5)], fill=APPLE_LEAF)
-
-    return img
+function loop(now){{
+  tick++;
+  if(state==='over'){{
+    drawBg(); drawGrid(); drawSnake(); drawFood(); drawOver();
+    document.getElementById('score').textContent=score;
+    document.getElementById('best').textContent=best;
+    requestAnimationFrame(loop);
+    return;
+  }}
+  if(now-lastMove>=TICK_MS){{
+    lastMove=now;
+    move();
+  }}
+  document.getElementById('score').textContent=score;
+  document.getElementById('best').textContent=best;
+  drawBg();
+  drawGrid();
+  drawSnake();
+  drawFood();
+  requestAnimationFrame(loop);
+}}
+let lastMove=0;
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
+"""
 
 
 def main():
@@ -145,79 +231,39 @@ def main():
         unsafe_allow_html=True,
     )
     st.markdown(
-        "<p style='text-align:center;color:#6b8a6b'>Snake moves continuously — click direction to steer</p>",
+        "<p style='text-align:center;color:#6b8a6b'>↑↓←→ or W A S D to move · Same as the desktop version</p>",
         unsafe_allow_html=True,
     )
 
-    init_state()
-    s = st.session_state
+    if "screen" not in st.session_state:
+        st.session_state.screen = "menu"
 
-    if s.screen == "menu":
-        st.subheader("Ready to play?")
-        if st.button("Start Game"):
-            s.screen = "play"
-            s.snake = [(COLS // 2, ROWS // 2)]
-            s.direction = (1, 0)
-            s.grow_pending = 0
-            s.food = random_food(s.snake)
-            s.score = 0
-            s.game_over = False
+    if st.session_state.screen == "menu":
+        st.subheader("Choose difficulty")
+        diff = st.radio(
+            "Difficulty",
+            list(DIFFICULTIES.keys()),
+            index=1,
+            horizontal=True,
+            label_visibility="collapsed",
+        )
+        speed_mult = DIFFICULTIES[diff]
+        if st.button("Start Game", type="primary", use_container_width=True):
+            st.session_state.screen = "game"
+            st.session_state.difficulty = diff
+            st.session_state.speed_mult = speed_mult
             st.rerun()
+        st.caption("Use ↑/↓ to choose, ENTER to start — like the desktop game")
         return
 
-    if s.game_over:
-        st.error(f"Game Over! Score: {s.score} | Best: {s.high_score}")
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Play Again"):
-                s.game_over = False
-                s.snake = [(COLS // 2, ROWS // 2)]
-                s.direction = (1, 0)
-                s.grow_pending = 0
-                s.food = random_food(s.snake)
-                s.score = 0
-                st.rerun()
-        with col2:
-            if st.button("Back to Menu"):
-                s.screen = "menu"
-                st.rerun()
-        return
+    # Game screen
+    speed_mult = st.session_state.get("speed_mult", 1.0)
+    html = get_game_html(speed_mult)
+    st.caption("👆 Click the game area below to focus, then use ↑↓←→ or W A S D")
+    components.html(html, height=620, scrolling=False)
 
-    # Playing: snake moves every tick (auto-refresh)
-    move_snake()
-    if s.game_over:
-        st.rerun()
-
-    st_autorefresh(interval=TICK_MS, limit=None, key="snake_refresh")
-
-    st.caption(f"Score: {s.score} | Best: {s.high_score}")
-
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        img = render_board()
-        st.image(img, use_container_width=True)
-
-    st.markdown("---")
-    st.markdown("**Direction** (click to steer)")
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        if st.button("⬅️ Left"):
-            change_direction(-1, 0)
-            st.rerun()
-    with col2:
-        if st.button("⬆️ Up"):
-            change_direction(0, -1)
-            st.rerun()
-    with col3:
-        if st.button("⬇️ Down"):
-            change_direction(0, 1)
-            st.rerun()
-    with col4:
-        if st.button("➡️ Right"):
-            change_direction(1, 0)
-            st.rerun()
-    if st.button("🏠 Back to Menu"):
-        s.screen = "menu"
+    if st.button("← Back to Menu"):
+        st.session_state.screen = "menu"
         st.rerun()
 
 
