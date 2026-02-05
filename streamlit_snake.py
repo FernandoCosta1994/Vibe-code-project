@@ -37,7 +37,7 @@ const W=800,H=568,CELL=20,COLS=W/CELL,ROWS=H/CELL;
 const TICK_MS={tick_ms};
 
 const COLORS={{forestTop:'#061a14',forestMid:'#0a2d1c',forestBottom:'#241a12',treeDark:'#091910',treeLeaves:'#144623',
-snakeHead:'#b8f090',snakeBody:'#6ed66e',snakeBelly:'#3a8a4a',snakeOutline:'#1a5020',appleRed:'#d73c3c',appleHighlight:'#fad2d2',
+snakeHead:'#88ff44',snakeBody:'#44cc44',snakeBelly:'#228822',appleRed:'#d73c3c',appleHighlight:'#fad2d2',
 appleLeaf:'#28823c',appleStem:'#5a371e',grid:'#142d1e',white:'#fff',black:'#111'}};
 
 let snake=[], dir=[1,0], food, score=0, best=0, grow=0, tick=0, state='play', lastMove=0;
@@ -102,31 +102,32 @@ function drawGrid(){{
 function drawSnake(){{
   if(!snake.length) return;
   for(let i=0;i<snake.length;i++){{
-    const [gx,gy]=snake[i], x=gx*CELL, y=gy*CELL, head=i===0;
-    ctx.fillStyle=COLORS.snakeOutline;
-    ctx.fillRect(x,y,CELL,CELL);
+    const seg=snake[i], gx=seg[0], gy=seg[1], x=gx*CELL, y=gy*CELL, head=(i===0);
+    ctx.strokeStyle='#0a3010';
+    ctx.lineWidth=2;
     ctx.fillStyle=COLORS.snakeBody;
-    ctx.fillRect(x+2,y+2,CELL-4,CELL-4);
-    ctx.fillStyle=COLORS.snakeBelly;
-    ctx.fillRect(x+2,y+CELL/2+1,CELL-4,CELL/2-3);
+    ctx.fillRect(x+1,y+1,CELL-2,CELL-2);
+    ctx.strokeRect(x+1,y+1,CELL-2,CELL-2);
     if(head){{
       ctx.fillStyle=COLORS.snakeHead;
-      ctx.fillRect(x+1,y+1,CELL-2,CELL-2);
+      ctx.fillRect(x,y,CELL,CELL);
+      ctx.strokeStyle='#1a5020';
+      ctx.strokeRect(x,y,CELL,CELL);
       const [dx,dy]=dir;
-      let e1,e2;
-      if(dx===1){{ e1=[x+CELL-8,y+8]; e2=[x+CELL-8,y+CELL-8]; }}
-      else if(dx===-1){{ e1=[x+8,y+8]; e2=[x+8,y+CELL-8]; }}
-      else if(dy===-1){{ e1=[x+8,y+8]; e2=[x+CELL-8,y+8]; }}
-      else{{ e1=[x+8,y+CELL-8]; e2=[x+CELL-8,y+CELL-8]; }}
-      ctx.fillStyle=COLORS.white;
+      let ex1,ey1,ex2,ey2;
+      if(dx===1){{ ex1=x+CELL-6;ey1=y+6;ex2=x+CELL-6;ey2=y+CELL-6; }}
+      else if(dx===-1){{ ex1=x+6;ey1=y+6;ex2=x+6;ey2=y+CELL-6; }}
+      else if(dy===-1){{ ex1=x+6;ey1=y+6;ex2=x+CELL-6;ey2=y+6; }}
+      else{{ ex1=x+6;ey1=y+CELL-6;ex2=x+CELL-6;ey2=y+CELL-6; }}
+      ctx.fillStyle='#ffffff';
       ctx.beginPath();
-      ctx.arc(e1[0],e1[1],3,0,Math.PI*2);
-      ctx.arc(e2[0],e2[1],3,0,Math.PI*2);
+      ctx.arc(ex1,ey1,3,0,6.28);
+      ctx.arc(ex2,ey2,3,0,6.28);
       ctx.fill();
-      ctx.fillStyle=COLORS.black;
+      ctx.fillStyle='#000000';
       ctx.beginPath();
-      ctx.arc(e1[0],e1[1],2,0,Math.PI*2);
-      ctx.arc(e2[0],e2[1],2,0,Math.PI*2);
+      ctx.arc(ex1,ey1,1.5,0,6.28);
+      ctx.arc(ex2,ey2,1.5,0,6.28);
       ctx.fill();
     }}
   }}
@@ -177,6 +178,7 @@ function drawOver(){{
 }}
 
 reset();
+C.width=C.width;
 C.focus();
 document.getElementById('score').textContent=0;
 document.getElementById('best').textContent=best;
@@ -213,6 +215,12 @@ function loop(now){{
   drawGrid();
   drawSnake();
   drawFood();
+  if(snake.length>0){{
+    const h=snake[0], px=h[0]*CELL, py=h[1]*CELL;
+    ctx.strokeStyle='#00ff00';
+    ctx.lineWidth=3;
+    ctx.strokeRect(px-1,py-1,CELL+2,CELL+2);
+  }}
   requestAnimationFrame(loop);
 }}
 let lastMove=0;
