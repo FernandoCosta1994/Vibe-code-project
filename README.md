@@ -1,9 +1,10 @@
 # Snake Game — Forest Edition
 
-A classic Snake game with a forest theme. Two versions:
+A classic Snake game with a forest theme. Three ways to play:
 
 - **Desktop** — Python + pygame (real-time, keyboard controls)
-- **Streamlit** — Web version (snake moves continuously, click to steer)
+- **Streamlit** — Download HTML from the app, open in browser
+- **HTML** — Open `snake_game.html` directly in any browser
 
 ## Requirements
 
@@ -11,6 +12,10 @@ A classic Snake game with a forest theme. Two versions:
 - `pip` (Python package manager)
 
 All dependencies are in `requirements.txt`.
+
+## Play in browser (no install)
+
+Double-click `snake_game.html` or open it in Chrome/Edge. Use **↑↓←→** or **W A S D** to move.
 
 ## Set up (Windows / PowerShell)
 
@@ -51,4 +56,4 @@ streamlit run streamlit_snake.py
 
 **Desktop:** Arrow keys or W/A/S/D. Main menu: ↑/↓ for difficulty, ENTER to start. After game over: ENTER = retry, M = menu, ESC = quit.
 
-**Streamlit:** Same controls as desktop — ↑↓←→ or W A S D. Click the game area to focus, then use keyboard.
+**Streamlit:** Download the HTML file from the app, then open it in your browser. Same controls as desktop — ↑↓←→ or W A S D.
