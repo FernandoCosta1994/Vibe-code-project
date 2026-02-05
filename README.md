@@ -3,7 +3,7 @@
 A classic Snake game with a forest theme. Two versions:
 
 - **Desktop** — Python + pygame (real-time, keyboard controls)
-- **Streamlit** — Turn-based web version (click buttons to move)
+- **Streamlit** — Web version (snake moves continuously, click to steer)
 
 ## Requirements
 
@@ -51,4 +51,4 @@ streamlit run streamlit_snake.py
 
 **Desktop:** Arrow keys or W/A/S/D. Main menu: ↑/↓ for difficulty, ENTER to start. After game over: ENTER = retry, M = menu, ESC = quit.
 
-**Streamlit:** Click the direction buttons (Left, Up, Down, Right) to move. Turn-based: one move per click.
+**Streamlit:** Snake moves continuously. Click the direction buttons (Left, Up, Down, Right) to steer.

@@ -1,15 +1,17 @@
 """
 Snake Game — Forest Edition (Streamlit)
-Turn-based version: each button press = one move.
+Real-time: snake moves continuously, use buttons to change direction.
 """
 import streamlit as st
 import random
 from PIL import Image, ImageDraw
+from streamlit_autorefresh import st_autorefresh
 
 # Game config
 COLS, ROWS = 24, 18
 CELL = 20
 W, H = COLS * CELL, ROWS * CELL
+TICK_MS = 150  # Snake moves every 150ms
 
 # Forest palette (RGB)
 FOREST_TOP = (6, 26, 20)
@@ -38,7 +40,6 @@ def init_state():
         st.session_state.high_score = 0
         st.session_state.game_over = False
         st.session_state.screen = "menu"
-        st.session_state.difficulty = 1
 
 
 def random_food(snake_positions):
@@ -70,6 +71,13 @@ def move_snake():
         s.score += 1
         s.grow_pending += 1
         s.food = random_food(s.snake)
+
+
+def change_direction(new_dx, new_dy):
+    s = st.session_state
+    opp = (-s.direction[0], -s.direction[1])
+    if (new_dx, new_dy) != opp:
+        s.direction = (new_dx, new_dy)
 
 
 def render_board():
@@ -137,7 +145,7 @@ def main():
         unsafe_allow_html=True,
     )
     st.markdown(
-        "<p style='text-align:center;color:#6b8a6b'>Turn-based: press a direction to move</p>",
+        "<p style='text-align:center;color:#6b8a6b'>Snake moves continuously — click direction to steer</p>",
         unsafe_allow_html=True,
     )
 
@@ -175,7 +183,13 @@ def main():
                 st.rerun()
         return
 
-    # Playing
+    # Playing: snake moves every tick (auto-refresh)
+    move_snake()
+    if s.game_over:
+        st.rerun()
+
+    st_autorefresh(interval=TICK_MS, limit=None, key="snake_refresh")
+
     st.caption(f"Score: {s.score} | Best: {s.high_score}")
 
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -184,32 +198,24 @@ def main():
         st.image(img, use_container_width=True)
 
     st.markdown("---")
-    st.markdown("**Direction** (click to move)")
+    st.markdown("**Direction** (click to steer)")
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         if st.button("⬅️ Left"):
-            if s.direction != (1, 0):
-                s.direction = (-1, 0)
-                move_snake()
-                st.rerun()
+            change_direction(-1, 0)
+            st.rerun()
     with col2:
         if st.button("⬆️ Up"):
-            if s.direction != (0, 1):
-                s.direction = (0, -1)
-                move_snake()
-                st.rerun()
+            change_direction(0, -1)
+            st.rerun()
     with col3:
         if st.button("⬇️ Down"):
-            if s.direction != (0, -1):
-                s.direction = (0, 1)
-                move_snake()
-                st.rerun()
+            change_direction(0, 1)
+            st.rerun()
     with col4:
         if st.button("➡️ Right"):
-            if s.direction != (-1, 0):
-                s.direction = (1, 0)
-                move_snake()
-                st.rerun()
+            change_direction(1, 0)
+            st.rerun()
     if st.button("🏠 Back to Menu"):
         s.screen = "menu"
         st.rerun()
