@@ -29,7 +29,7 @@ body {{ background: #0a1410; display: flex; justify-content: center; align-items
 <body>
 <div id="game">
 <div class="hud"><span>Score: <b id="score">0</b></span><span>Best: <b id="best">0</b></span></div>
-<canvas id="c" width="800" height="568" tabindex="1"></canvas>
+<canvas id="c" width="800" height="568" tabindex="1" style="vertical-align:top"></canvas>
 </div>
 <script>
 const C=document.getElementById('c'), ctx=C.getContext('2d');
@@ -37,7 +37,7 @@ const W=800,H=568,CELL=20,COLS=W/CELL,ROWS=H/CELL;
 const TICK_MS={tick_ms};
 
 const COLORS={{forestTop:'#061a14',forestMid:'#0a2d1c',forestBottom:'#241a12',treeDark:'#091910',treeLeaves:'#144623',
-snakeHead:'#aaf078',snakeBody:'#5abe5a',snakeBelly:'#286e3c',snakeOutline:'#0f2814',appleRed:'#d73c3c',appleHighlight:'#fad2d2',
+snakeHead:'#b8f090',snakeBody:'#6ed66e',snakeBelly:'#3a8a4a',snakeOutline:'#1a5020',appleRed:'#d73c3c',appleHighlight:'#fad2d2',
 appleLeaf:'#28823c',appleStem:'#5a371e',grid:'#142d1e',white:'#fff',black:'#111'}};
 
 let snake=[], dir=[1,0], food, score=0, best=0, grow=0, tick=0, state='play', lastMove=0;
@@ -100,21 +100,18 @@ function drawGrid(){{
 }}
 
 function drawSnake(){{
+  if(!snake.length) return;
   for(let i=0;i<snake.length;i++){{
     const [gx,gy]=snake[i], x=gx*CELL, y=gy*CELL, head=i===0;
     ctx.fillStyle=COLORS.snakeOutline;
-    roundRect(x,y,CELL,CELL,6);
-    ctx.fill();
+    ctx.fillRect(x,y,CELL,CELL);
     ctx.fillStyle=COLORS.snakeBody;
-    roundRect(x+2,y+2,CELL-4,CELL-4,5);
-    ctx.fill();
+    ctx.fillRect(x+2,y+2,CELL-4,CELL-4);
     ctx.fillStyle=COLORS.snakeBelly;
-    roundRect(x+2,y+CELL/2,CELL-4,CELL/2-2,5);
-    ctx.fill();
+    ctx.fillRect(x+2,y+CELL/2+1,CELL-4,CELL/2-3);
     if(head){{
       ctx.fillStyle=COLORS.snakeHead;
-      roundRect(x+1,y+1,CELL-2,CELL-2,7);
-      ctx.fill();
+      ctx.fillRect(x+1,y+1,CELL-2,CELL-2);
       const [dx,dy]=dir;
       let e1,e2;
       if(dx===1){{ e1=[x+CELL-8,y+8]; e2=[x+CELL-8,y+CELL-8]; }}
@@ -179,8 +176,10 @@ function drawOver(){{
   ctx.fillText('ENTER: play again   •   Click "Back to Menu" below',W/2,H/2+80);
 }}
 
-C.focus();
 reset();
+C.focus();
+document.getElementById('score').textContent=0;
+document.getElementById('best').textContent=best;
 
 document.addEventListener('keydown',e=>{{
   if(state==='over'){{
