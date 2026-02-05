@@ -1,31 +1,15 @@
 # Snake Game — Forest Edition
 
-A classic Snake game with a forest theme. Play on desktop (Python + pygame) or in the browser (HTML5).
+A classic Snake game with a forest theme, built with Python and `pygame`.
 
-## Play in the browser
-
-Open `snake_game.html` in any browser, or deploy it to GitHub Pages (see below).
-
-## Deploy to GitHub Pages
-
-1. Push your code to GitHub (including `snake_game.html`).
-2. In your repo: **Settings** → **Pages**.
-3. Under **Source**, choose **Deploy from a branch**.
-4. Select branch `main` and folder `/ (root)`.
-5. Click **Save**. Your game will be at `https://<username>.github.io/<repo-name>/snake_game.html`.
-
----
-
-## Desktop version (Python + pygame)
-
-### Requirements
+## Requirements
 
 - Python 3.9 or newer (recommended)
 - `pip` (Python package manager)
 
 All Python dependencies are listed in `requirements.txt`.
 
-### Set up a virtual environment (Windows / PowerShell)
+## Set up a virtual environment (Windows / PowerShell)
 
 From the project folder, run:
 
@@ -41,13 +25,11 @@ If execution policy blocks activation:
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
-### Run the desktop game
+## Run the game
 
 ```powershell
 python snake_game.py
 ```
-
----
 
 ## Controls
 
@@ -60,5 +42,4 @@ python snake_game.py
 **After game over:**
 - **ENTER** — play again
 - **M** — back to menu
-- **ESC** — quit (desktop) or back to menu (web)
-
+- **ESC** — quit
